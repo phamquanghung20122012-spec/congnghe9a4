@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Công Nghệ - Kỹ Sư Điều Khiển & Tự Động Hóa</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg1:#0f172a; --bg2:#1e1b4b; --accent:#22d3ee; --accent2:#a78bfa;
+    --pink:#fb7185; --card:rgba(255,255,255,.08);
+  }
+  body{
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, #312e81 0%, transparent 60%),
+                radial-gradient(1000px 500px at 90% 10%, #0e7490 0%, transparent 55%),
+                linear-gradient(135deg,var(--bg1),var(--bg2) 60%, #0b1220);
+    color:#fff; min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    overflow-x:hidden;
+  }
+  /* Header bar */
+  .topbar{
+    width:min(1100px,96vw); display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; margin-top:12px;
+    background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
+    border-radius:16px; backdrop-filter: blur(12px);
+  }
+  .topbar h1{font-size:18px; letter-spacing:.5px}
+  .topbar h1 span{color:var(--accent)}
+  .badge{background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#00131a; font-weight:800; padding:6px 12px; border-radius:999px; font-size:13px}
+  .progress-wrap{width:min(1100px,96vw); height:6px; background:rgba(255,255,255,.12); border-radius:999px; margin:10px 0 14px; overflow:hidden}
+  #progressBar{height:100%; width:14.28%; background:linear-gradient(90deg,var(--accent),var(--pink),var(--accent2)); transition:width .6s ease; border-radius:999px}
+  /* Stage 16:9 */
+  .stage{
+    width:min(1100px,96vw); aspect-ratio:16/9; position:relative;
+    border-radius:22px; overflow:hidden;
+    background:#0b1220;
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 30px 80px rgba(0,0,0,.5), 0 0 0 8px rgba(255,255,255,.03);
+  }
+  .slides{position:absolute; inset:0}
+  /* ===== Fullscreen: phóng to toàn màn hình ===== */
+  :fullscreen{background:#000}
+  :fullscreen body{background:#000; display:block; padding:0; margin:0}
+  :fullscreen .topbar, :fullscreen .progress-wrap, :fullscreen .controls, :fullscreen .hint{display:none !important}
+  :fullscreen .stage{width:100vw; height:100vh; max-width:none; aspect-ratio:auto; border-radius:0; border:none; box-shadow:none}
+  :fullscreen .slide{padding:5vh 5vw}
+  :fullscreen .img-wrap img{height:50vh}
+  :fullscreen .img-grid img{height:24vh}
+  .btn.full-go{animation:pulseFull 1.6s ease-in-out infinite}
+  @keyframes pulseFull{0%,100%{box-shadow:0 0 0 0 rgba(34,211,238,.65)}50%{box-shadow:0 0 0 12px rgba(34,211,238,0)}}
+  .slide{
+    position:absolute; inset:0; padding:38px 42px;
+    display:grid; grid-template-columns:1.05fr .95fr; gap:28px; align-items:center;
+    opacity:0; transform:translateX(90px) scale(.985); pointer-events:none;
+    transition:opacity .65s ease, transform .65s cubic-bezier(.22,.9,.28,1);
+    background-size:cover; background-position:center;
+  }
+  .slide::before{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(90deg, rgba(8,12,28,.94) 38%, rgba(8,12,28,.78) 62%, rgba(8,12,28,.45) 100%);
+    z-index:0;
+  }
+  .slide.center{grid-template-columns:1fr; text-align:center; justify-items:center}
+  .slide.center::before{background:linear-gradient(180deg, rgba(8,12,28,.88), rgba(30,27,75,.85))}
+  .slide.active{opacity:1; transform:none; pointer-events:auto; z-index:2}
+  .slide.exit-left{transform:translateX(-90px) scale(.985); opacity:0}
+  .slide > *{position:relative; z-index:1}
+  .kicker{
+    display:inline-block; font-size:12px; letter-spacing:2px; font-weight:800; color:#00131a;
+    background:linear-gradient(90deg,var(--accent),#fff); padding:6px 12px; border-radius:999px; margin-bottom:12px;
+  }
+  .slide h2{font-size:clamp(26px,3.4vw,42px); line-height:1.1; margin-bottom:12px}
+  .slide h2 .hl{background:linear-gradient(90deg,var(--accent),var(--pink)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .slide p.sub{color:#cbd5e1; font-size:15px; margin-bottom:16px}
+  .card{
+    background:var(--card); border:1px solid rgba(255,255,255,.14);
+    border-radius:16px; padding:14px 16px; margin:9px 0; text-align:left;
+    backdrop-filter: blur(8px); box-shadow:0 8px 24px rgba(0,0,0,.25);
+  }
+  .card b{color:var(--accent)}
+  .card.three b{color:#fda4af}
+  ul.list{list-style:none; display:grid; gap:10px; text-align:left}
+  ul.list li{background:var(--card); border:1px solid rgba(255,255,255,.13); border-radius:14px; padding:11px 13px; font-size:14.5px; line-height:1.5}
+  ul.list li strong{color:var(--accent)}
+  .img-wrap{position:relative; z-index:1}
+  .img-wrap img{
+    width:100%; height:360px; object-fit:cover; border-radius:18px;
+    border:1px solid rgba(255,255,255,.25); box-shadow:0 20px 50px rgba(0,0,0,.45);
+  }
+  .img-wrap .tag{
+    position:absolute; left:12px; bottom:12px; background:rgba(0,0,0,.6);
+    border:1px solid rgba(255,255,255,.2); padding:7px 12px; border-radius:999px; font-size:12.5px; backdrop-filter:blur(6px);
+  }
+  .img-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .img-grid img{height:172px}
+  /* animation for inner */
+  .anim{opacity:0; transform:translateY(18px)}
+  .slide.active .anim{animation:fadeUp .7s ease forwards; animation-delay:var(--d,0s)}
+  @keyframes fadeUp{to{opacity:1; transform:none}}
+  /* members */
+  .members{display:flex; gap:14px; margin-top:14px; flex-wrap:wrap; justify-content:center}
+  .member{
+    width:200px; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16);
+    border-radius:18px; padding:16px 12px; text-align:center;
+  }
+  .avatar{
+    width:78px; height:78px; margin:0 auto 10px; border-radius:50%;
+    display:grid; place-items:center; font-size:30px; font-weight:900; color:#00131a;
+    background:linear-gradient(135deg,var(--accent),var(--accent2),var(--pink));
+    border:3px solid rgba(255,255,255,.6);
+  }
+  .member h3{font-size:16px; margin-bottom:4px}
+  .member p{font-size:12.5px; color:#cbd5e1}
+  /* controls */
+  .controls{
+    width:min(1100px,96vw); display:flex; align-items:center; justify-content:space-between;
+    margin:14px 0 8px; gap:12px; flex-wrap:wrap;
+  }
+  .btn{
+    cursor:pointer; border:none; border-radius:12px; padding:11px 18px; font-weight:800; font-size:14px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#00131a; transition:.2s;
+  }
+  .btn:hover{transform:translateY(-1px); filter:brightness(1.08)}
+  .btn.ghost{background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2)}
+  .dots{display:flex; gap:8px; align-items:center}
+  .dot{width:12px; height:12px; border-radius:999px; background:rgba(255,255,255,.25); cursor:pointer; transition:.25s; border:none}
+  .dot.active{width:34px; background:linear-gradient(90deg,var(--accent),var(--pink))}
+  #counter{font-size:13px; color:#cbd5e1; background:rgba(255,255,255,.08); padding:8px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.15)}
+  .hint{font-size:12.5px; color:#94a3b8; margin-bottom:22px}
+  kbd{background:#1e293b; border:1px solid #475569; border-bottom-width:3px; padding:1px 7px; border-radius:6px; font-size:12px}
+  .class-info{
+    display:inline-block; margin-top:10px; font-size:14px; font-weight:700; color:#fef08a;
+    background:rgba(0,0,0,.45); border:1px dashed rgba(253,224,71,.7);
+    padding:8px 16px; border-radius:999px; cursor:text;
+  }
+  .class-info:focus{outline:2px solid var(--accent); background:rgba(0,0,0,.65)}
+  .music-btn{
+    position:absolute; top:12px; right:12px; z-index:6;
+    background:rgba(0,0,0,.55); color:#fff; border:1px solid rgba(255,255,255,.3);
+    padding:8px 12px; border-radius:999px; font-size:13px; cursor:pointer; backdrop-filter:blur(6px);
+  }
+
+  /* ===== SLIDE 7 cherry blossom - nền hồng nhạt ===== */
+  #s7{overflow:hidden; grid-template-columns:1fr; text-align:center; justify-items:center; background:#fdeef4}
+  #s7::before{background:linear-gradient(180deg, #fdf2f7 0%, #fce7f1 38%, #fbcfe4 72%, #f9b8d0 100%)}
+  #s7 .kicker{background:linear-gradient(90deg,#db2777,#f472b6); color:#fff}
+  .thanks{
+    font-size:clamp(34px,5vw,62px); font-weight:900; letter-spacing:1px; line-height:1;
+    background:linear-gradient(90deg,#9d174d,#db2777,#e11d48,#9d174d);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 4px 14px rgba(219,39,119,.35));
+    animation:glow 2.2s ease-in-out infinite alternate;
+  }
+  @keyframes glow{from{transform:scale(1)} to{transform:scale(1.03)}}
+  .thanks-sub{color:#831843; margin:10px 0 6px; font-size:16px; font-weight:600}
+  #s7 .btn.ghost{background:rgba(255,255,255,.7); color:#9d174d; border:1px solid #f9a8d4}
+  .road{
+    position:absolute; left:0; right:0; bottom:0; height:110px; z-index:1;
+    background:linear-gradient(180deg, #f9b8d0 0%, #f6a3c6 35%, #eba7c6 100%);
+    border-top:3px solid rgba(157,23,77,.22);
+  }
+  .road::after{
+    content:""; position:absolute; top:52%; left:0; right:0; height:6px;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,.9) 0 44px, transparent 44px 80px);
+    opacity:.7;
+  }
+  /* cây hoa anh đào kiểu ảnh mẫu: cành mảnh + hoa rải - giữa lướt sang phải */
+  .sakura-tree{
+    position:absolute; bottom:58px; left:50%; width:min(540px,62vw); height:min(560px,72vh); z-index:2;
+    transform:translateX(-50%);
+    filter:drop-shadow(0 14px 20px rgba(157,23,77,.25));
+    will-change:left, transform, opacity;
+  }
+  #s7.active .sakura-tree{animation:centerToRight 7s cubic-bezier(.22,.61,.36,1) .4s both}
+  @keyframes centerToRight{
+    0%{left:50%; transform:translateX(-50%) scale(.45); opacity:0}
+    14%{opacity:1}
+    28%{left:50%; transform:translateX(-50%) scale(1); opacity:1}
+    100%{left:calc(100% - 290px); transform:translateX(-50%) scale(1); opacity:1}
+  }
+  .sakura-tree canvas{width:100%; height:100%; display:block}
+  .tree-label{
+    position:absolute; bottom:-6px; left:50%; transform:translateX(-50%);
+    background:rgba(255,255,255,.95); color:#be123c; font-weight:900; font-size:12px;
+    padding:5px 14px; border-radius:999px; white-space:nowrap; border:2px solid #f9a8d4;
+    box-shadow:0 6px 16px rgba(157,23,77,.25);
+  }
+  /* petals */
+  #petals{position:absolute; inset:0; overflow:hidden; z-index:3; pointer-events:none}
+  .petal{
+    position:absolute; top:-20px; width:14px; height:12px;
+    background:radial-gradient(circle at 30% 30%, #fff0f4, #f9a8d4 55%, #ec4899);
+    border-radius:80% 0 80% 0; opacity:.95;
+    animation:fall linear forwards;
+  }
+  @keyframes fall{
+    to{transform:translateY(110vh) translateX(80px) rotate(720deg); opacity:.9}
+  }
+  .ground-flowers{position:absolute; bottom:128px; left:0; right:0; z-index:2; font-size:22px; letter-spacing:6px; opacity:.9}
+
+  @media (max-width:860px){
+    .slide{grid-template-columns:1fr; padding:22px; overflow-y:auto; text-align:left}
+    .img-wrap img{height:200px} .img-grid img{height:110px}
+    .member{width:100%}
+    .stage{aspect-ratio:auto; min-height:620px}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📊 CÔNG NGHỆ <span>• Kỹ Sư Điều Khiển & Tự Động Hóa</span></h1>
+  <div class="badge">⚙ Control & Automation</div>
+</div>
+<div class="progress-wrap"><div id="progressBar"></div></div>
+
+<div class="stage" id="stage">
+  <div class="slides" id="slides">
+
+    <!-- SLIDE 1 -->
+    <section class="slide center active" id="s1" style="background-image:url('https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80')">
+      <div>
+        <div class="kicker anim" style="--d:.05s">SLIDE 1 / 7 • GIỚI THIỆU NHÓM</div>
+        <h2 class="anim" style="--d:.15s">Nhóm Thuyết Trình <span class="hl">Tự Động Hóa</span></h2>
+        <p class="sub anim" style="--d:.25s">Môn Công Nghệ • Chủ đề: Kỹ sư Kỹ thuật Điều khiển và Tự động hóa</p>
+        <div class="anim" style="--d:.28s"><span class="class-info" title="Lớp 9A4 - Trường THCS Quỳnh Lưu">🏫 Lớp 9A4 • Trường THCS Quỳnh Lưu</span></div>
+        <div class="members">
+          <div class="member anim" style="--d:.35s"><div class="avatar">H</div><h3>Phạm Quang Hưng</h3><p>Thành viên 1 • Thiết kế slide & Thuyết trình</p></div>
+          <div class="member anim" style="--d:.45s"><div class="avatar">H</div><h3>Nguyễn Ngọc Hải</h3><p>Thành viên 2 • Nội dung & Hình ảnh</p></div>
+          <div class="member anim" style="--d:.55s"><div class="avatar">D</div><h3>Phạm Đức Duy</h3><p>Thành viên 3 • Kỹ thuật & Demo</p></div>
+        </div>
+        <div class="card anim" style="--d:.65s; display:inline-block; margin-top:14px">👉 Nhấn <b>→</b> hoặc nút <b>Tiếp</b> để bắt đầu • Nhấn <b>F</b> để trình chiếu toàn màn hình</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 -->
+    <section class="slide" id="s2" style="background-image:url('https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80')">
+      <div>
+        <div class="kicker anim" style="--d:.05s">SLIDE 2 / 7 • TÊN NGHỀ</div>
+        <h2 class="anim" style="--d:.15s">Tên <span class="hl">Nghề Nghiệp</span></h2>
+        <p class="sub anim" style="--d:.22s">Người đứng sau những nhà máy thông minh, dây chuyền không người lái.</p>
+        <div class="card anim" style="--d:.3s">🏷️ <b>Tên chính thức:</b> Kỹ sư Kỹ thuật Điều khiển và Tự động hóa <i>(Control & Automation Engineer)</i>.</div>
+        <ul class="list">
+          <li class="anim" style="--d:.4s">🤖 <strong>Kỹ sư PLC / SCADA</strong> — lập trình điều khiển logic, giám sát tập trung.</li>
+          <li class="anim" style="--d:.5s">🔗 <strong>Kỹ sư Tích hợp Hệ thống</strong> <i>(System Integration Engineer)</i> — kết nối máy móc thành một hệ thống.</li>
+          <li class="anim" style="--d:.6s">🛠️ <strong>Kỹ thuật viên Tự động hóa</strong> — lắp đặt, vận hành, bảo trì thực tế.</li>
+        </ul>
+      </div>
+      <div class="img-wrap anim" style="--d:.4s">
+        <div class="img-grid">
+          <img src="https://images.unsplash.com/photo-1537462715879-360eeb61a0ad?auto=format&fit=crop&w=600&q=80" alt="Robot công nghiệp" onerror="this.src='https://picsum.photos/seed/robot/600/400'">
+          <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80" alt="Vi mạch điều khiển" onerror="this.src='https://picsum.photos/seed/chip/600/400'">
+        </div>
+        <img style="margin-top:12px; height:172px" src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80" alt="Tủ điện PLC" onerror="this.src='https://picsum.photos/seed/plc/800/400'">
+        <div class="tag">⚙ PLC • SCADA • Robot • HMI</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3 -->
+    <section class="slide" id="s3" style="background-image:url('https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1200&q=80')">
+      <div>
+        <div class="kicker anim" style="--d:.05s">SLIDE 3 / 7 • NHIỆM VỤ</div>
+        <h2 class="anim" style="--d:.15s">Nhiệm Vụ <span class="hl">Công Việc</span></h2>
+        <ul class="list">
+          <li class="anim" style="--d:.28s">💻 <strong>Thiết kế & Lập trình:</strong> Viết chương trình cho PLC, HMI, SCADA, DCS và robot công nghiệp.</li>
+          <li class="anim" style="--d:.38s">🔌 <strong>Lắp đặt & Tích hợp:</strong> Đấu nối tủ điện, cảm biến, biến tần, động cơ, van khí nén.</li>
+          <li class="anim" style="--d:.48s">🚀 <strong>Vận hành & Chạy thử (Commissioning):</strong> Hiệu chỉnh dây chuyền trước khi bàn giao.</li>
+          <li class="anim" style="--d:.58s">🔧 <strong>Bảo trì & Khắc phục sự cố:</strong> Chẩn đoán lỗi để khôi phục sản xuất nhanh nhất.</li>
+          <li class="anim" style="--d:.68s">📈 <strong>Cải tiến hệ thống:</strong> Tối ưu chu kỳ sản xuất, tiết kiệm năng lượng.</li>
+        </ul>
+      </div>
+      <div class="img-wrap anim" style="--d:.4s">
+        <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80" alt="Kỹ sư lập trình tự động hóa" onerror="this.src='https://picsum.photos/seed/engineer/800/500'">
+        <div class="tag">💡 Từ code → dây chuyền thật</div>
+        <div class="card" style="margin-top:12px">Siemens • Mitsubishi • Omron • ABB • Allen-Bradley</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4 -->
+    <section class="slide" id="s4" style="background-image:url('https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=1200&q=80')">
+      <div>
+        <div class="kicker anim" style="--d:.05s">SLIDE 4 / 7 • MÔI TRƯỜNG LÀM VIỆC</div>
+        <h2 class="anim" style="--d:.15s">Môi Trường <span class="hl">Làm Việc</span></h2>
+        <ul class="list">
+          <li class="anim" style="--d:.3s">🏢 <strong>Không gian linh hoạt:</strong> Phòng kỹ thuật (thiết kế, mô phỏng) ↔ Nhà xưởng (kiểm tra tủ điện, cân chỉnh máy).</li>
+          <li class="anim" style="--d:.42s">⚡ <strong>Điều kiện thực tế:</strong> Điện áp cao, cơ khí, tiếng ồn và nhiệt độ nhà xưởng — luôn cần bảo hộ lao động.</li>
+          <li class="anim" style="--d:.54s">⏱️ <strong>Đặc thù áp lực:</strong> Chạy đua thời gian khi dây chuyền dừng đột ngột; đi công tác nhiều theo dự án.</li>
+        </ul>
+      </div>
+      <div class="img-wrap anim" style="--d:.4s">
+        <img src="https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?auto=format&fit=crop&w=800&q=80" alt="Nhà máy công nghiệp" onerror="this.src='https://picsum.photos/seed/factory/800/500'">
+        <div class="tag">🏭 Phòng lab ↔ Nhà xưởng</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5 -->
+    <section class="slide" id="s5" style="background-image:url('https://images.unsplash.com/photo-1581092795360-fd1ca04f0952?auto=format&fit=crop&w=1200&q=80')">
+      <div>
+        <div class="kicker anim" style="--d:.05s">SLIDE 5 / 7 • ĐÀO TẠO</div>
+        <h2 class="anim" style="--d:.15s">Quá Trình <span class="hl">Đào Tạo</span></h2>
+        <ul class="list">
+          <li class="anim" style="--d:.3s">🎓 <strong>Trung cấp / Cao đẳng (2–3 năm):</strong> Thực hành, lắp tủ điện, bảo trì cơ điện, PLC cơ bản.</li>
+          <li class="anim" style="--d:.42s">🏛️ <strong>Đại học (4–4.5 năm):</strong> Lý thuyết điều khiển, xử lý tín hiệu, nhúng, vi điều khiển, PLC/SCADA nâng cao, robot & AI.</li>
+          <li class="anim" style="--d:.54s">🧰 <strong>Kỹ năng bổ trợ:</strong> Đọc bản vẽ (AutoCAD, EPLAN), tiếng Anh chuyên ngành (Siemens, Mitsubishi, Omron, ABB), tư duy chẩn đoán lỗi.</li>
+        </ul>
+      </div>
+      <div class="img-wrap anim" style="--d:.4s">
+        <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80" alt="Học tập kỹ thuật" onerror="this.src='https://picsum.photos/seed/study/800/500'">
+        <div class="tag">📚 Học đi đôi với hành</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6 -->
+    <section class="slide" id="s6" style="background-image:url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1200&q=80')">
+      <div>
+        <div class="kicker anim" style="--d:.05s">SLIDE 6 / 7 • THU NHẬP</div>
+        <h2 class="anim" style="--d:.15s">Thu Nhập <span class="hl">Hấp Dẫn</span></h2>
+        <div class="card anim" style="--d:.3s">🌱 <b>Mới tốt nghiệp (0–2 năm):</b> 8 – 12 triệu VNĐ/tháng.</div>
+        <div class="card anim" style="--d:.42s">🚀 <b>Kinh nghiệm (3–5 năm):</b> 15 – 25 triệu VNĐ/tháng.</div>
+        <div class="card anim" style="--d:.54s">👑 <b>Trưởng nhóm / Chuyên gia (5+ năm):</b> 30 – 50+ triệu VNĐ/tháng tại Samsung, LG, Foxconn, ABB, Siemens, dự án FDI.</div>
+      </div>
+      <div class="img-wrap anim" style="--d:.4s">
+        <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=800&q=80" alt="Kỹ sư thành công" onerror="this.src='https://picsum.photos/seed/salary/800/500'">
+        <div class="tag">💰 Càng giỏi PLC + ngoại ngữ, lương càng cao</div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7 -->
+    <section class="slide" id="s7">
+      <button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵 Bật nhạc</button>
+      <audio id="bgMusic" loop preload="auto">
+        <source src="https://www.bensound.com/bensound-music/bensound-tenderness.mp3" type="audio/mpeg">
+        <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3" type="audio/mpeg">
+      </audio>
+      <div id="petals"></div>
+      <div style="z-index:4; margin-top:18px">
+        <div class="kicker anim" style="--d:.1s">SLIDE 7 / 7 • LỜI CẢM ƠN</div>
+        <div class="thanks anim" style="--d:.25s">Thanks for watching! 🌸</div>
+        <p class="thanks-sub anim" style="--d:.4s">Cảm ơn cô và các bạn đã theo dõi bài thuyết trình của nhóm!</p>
+        <p class="thanks-sub anim" style="--d:.5s; font-size:14px; opacity:.9">Phạm Quang Hưng • Nguyễn Ngọc Hải • Phạm Đức Duy — Lớp 9A4 • Trường THCS Quỳnh Lưu ⚙</p>
+        <div class="anim" style="--d:.65s; margin-top:14px; display:flex; gap:10px; justify-content:center; z-index:5; position:relative">
+          <button class="btn" onclick="goTo(0)">↺ Xem lại từ đầu</button>
+          <button class="btn ghost" onclick="replayTree()">🌸 Xem lại cây hoa</button>
+        </div>
+      </div>
+      <div class="ground-flowers">🌸 🌸 🌸 🌸 🌸 🌸 🌸 🌸 🌸</div>
+      <!-- Cây hoa anh đào kiểu ảnh mẫu: cành mảnh + cánh hoa rải (vẽ bằng canvas) -->
+      <div class="sakura-tree" id="sakuraTree">
+        <canvas id="sakuraCanvas" width="1080" height="1140"></canvas>
+        <div class="tree-label">🌸 HOA ANH ĐÀO 🌸</div>
+      </div>
+      <div class="road"></div>
+    </section>
+
+  </div>
+</div>
+
+<div class="controls">
+  <button class="btn ghost" id="prevBtn">← Trước</button>
+  <div class="dots" id="dots"></div>
+  <div style="display:flex; gap:10px; align-items:center">
+    <span id="counter">1 / 7</span>
+    <button class="btn full-go" onclick="toggleFull()">⛶ Phóng to Fullscreen</button>
+    <button class="btn" id="nextBtn">Tiếp →</button>
+  </div>
+</div>
+<div class="hint">Dùng phím <kbd>←</kbd> <kbd>→</kbd> hoặc <kbd>Space</kbd> để chuyển slide • <kbd>F</kbd> hoặc <b>nhấp đúp vào slide</b> để phóng to toàn màn hình • Vuốt trên điện thoại</div>
+
+<script>
+let cur = 0;
+const slides = document.querySelectorAll('.slide');
+const dotsBox = document.getElementById('dots');
+const counter = document.getElementById('counter');
+const bar = document.getElementById('progressBar');
+
+slides.forEach((_,i)=>{
+  const d=document.createElement('button');
+  d.className='dot'+(i===0?' active':'');
+  d.title='Slide '+(i+1);
+  d.onclick=()=>goTo(i);
+  dotsBox.appendChild(d);
+});
+const dots=[...document.querySelectorAll('.dot')];
+
+function goTo(n){
+  const prev=cur;
+  cur=(n+slides.length)%slides.length;
+  slides.forEach((s,i)=>{
+    s.classList.remove('active','exit-left');
+    if(i===prev && i!==cur) s.classList.add('exit-left');
+  });
+  // restart animation trick
+  void document.getElementById('stage').offsetWidth;
+  slides[cur].classList.add('active');
+  dots.forEach((d,i)=>d.classList.toggle('active',i===cur));
+  counter.textContent=(cur+1)+' / '+slides.length;
+  bar.style.width=((cur+1)/slides.length*100)+'%';
+  if(slides[cur].id==='s7'){ startPetals(); restartTree(); tryPlayMusic(); }
+  else { stopPetals(); pauseMusic(); }
+}
+function next(){goTo(cur+1)} function prev(){goTo(cur-1)}
+document.getElementById('nextBtn').onclick=next;
+document.getElementById('prevBtn').onclick=prev;
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){e.preventDefault();next();}
+  if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+  if(e.key.toLowerCase()==='f'){toggleFull();}
+  if(e.key==='Home')goTo(0); if(e.key==='End')goTo(slides.length-1);
+});
+function toggleFull(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen();
+}
+// touch swipe
+let tx=0;
+const stage=document.getElementById('stage');
+stage.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+stage.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>40){ dx<0?next():prev(); }
+},{passive:true});
+
+// petals
+let petalTimer=null;
+function startPetals(){
+  stopPetals();
+  const box=document.getElementById('petals');
+  box.innerHTML='';
+  const make=()=>{
+    if(document.querySelector('#s7.active')==null) return;
+    const p=document.createElement('div');
+    p.className='petal';
+    p.style.left=Math.random()*100+'%';
+    const size=8+Math.random()*10;
+    p.style.width=size+'px'; p.style.height=(size*.85)+'px';
+    p.style.animationDuration=(3+Math.random()*4)+'s';
+    p.style.animationDelay=(Math.random()*.8)+'s';
+    box.appendChild(p);
+    setTimeout(()=>p.remove(),7000);
+    if(box.childNodes.length>90) box.removeChild(box.firstChild);
+  };
+  for(let i=0;i<24;i++) setTimeout(make,i*120);
+  petalTimer=setInterval(make,280);
+}
+function stopPetals(){ if(petalTimer){clearInterval(petalTimer); petalTimer=null;} }
+function restartTree(){
+  const t=document.getElementById('sakuraTree');
+  t.style.animation='none'; void t.offsetWidth; t.style.animation='';
+}
+function replayTree(){ restartTree(); startPetals(); tryPlayMusic(); }
+// music: browsers block autoplay, so play on user gesture (slide change counts after click/key)
+let musicOn=true;
+function tryPlayMusic(){
+  if(!musicOn) return;
+  const a=document.getElementById('bgMusic');
+  if(!a) return;
+  a.volume=0.5;
+  a.play().then(()=>setBtn(true)).catch(()=>{
+    // autoplay bị chặn -> hiện nút để user bật
+    setBtn(false);
+  });
+}
+function pauseMusic(){
+  const a=document.getElementById('bgMusic');
+  if(a && !a.paused && musicOn && slides[cur].id!=='s7'){ /* giữ nhạc chỉ ở slide 7 */ a.pause(); }
+}
+function toggleMusic(){
+  const a=document.getElementById('bgMusic');
+  musicOn=!musicOn;
+  if(musicOn){ a.play().catch(()=>{}); setBtn(true); }
+  else { a.pause(); setBtn(false); }
+}
+function setBtn(playing){
+  const b=document.getElementById('musicBtn');
+  if(b) b.textContent=playing?'🎵 Tắt nhạc':'🎵 Bật nhạc';
+}
+// nhấp đúp vào slide để phóng to / thu nhỏ toàn màn hình
+stage.addEventListener('dblclick',()=>toggleFull());
+
+// ===== Cây hoa anh đào kiểu ảnh mẫu: cành mảnh fractal + cánh hoa rải =====
+function drawSakura(){
+  const cv=document.getElementById('sakuraCanvas');
+  if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  let seed=20260912;
+  const rnd=()=>{ seed=(seed*16807)%2147483647; return (seed&0xffff)/0xffff; };
+  const tips=[];
+  function branch(x,y,angle,len,w,depth){
+    const x2=x+Math.cos(angle)*len, y2=y+Math.sin(angle)*len;
+    ctx.strokeStyle=depth>6?'#5a3436':(depth>3?'#412528':'#2c181a');
+    ctx.lineWidth=Math.max(1,w); ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x2,y2); ctx.stroke();
+    if(depth<=0){ tips.push([x2,y2]); return; }
+    const kids=depth>7?3:2;
+    for(let i=0;i<kids;i++){
+      const dir=i===0?-1:(i===1?1:0);
+      const spread=(0.32+rnd()*0.5)*(depth>5?0.75:1);
+      const na=angle+dir*spread+(rnd()-0.5)*0.28;
+      branch(x2,y2,na,len*(0.66+rnd()*0.13),w*0.64,depth-1);
+    }
+    if(depth<8&&rnd()<0.28) branch(x2,y2,angle+(rnd()-0.5)*0.4,len*0.7,w*0.6,depth-1);
+  }
+  branch(W/2,H-6,-Math.PI/2,H*0.20,17,9);
+  // bóng đổ gốc
+  ctx.fillStyle='rgba(157,23,77,.18)';
+  ctx.beginPath(); ctx.ellipse(W/2,H-10,120,14,0,0,Math.PI*2); ctx.fill();
+  // chùm hoa ở đầu cành
+  tips.forEach(t=>{
+    const n=4+Math.floor(rnd()*4);
+    for(let i=0;i<n;i++){
+      const bx=t[0]+(rnd()-0.5)*44, by=t[1]+(rnd()-0.5)*36;
+      const r=3.5+rnd()*5.5, rot=rnd()*Math.PI;
+      ctx.save(); ctx.translate(bx,by); ctx.rotate(rot);
+      ctx.globalAlpha=0.55+rnd()*0.4;
+      ctx.fillStyle='#f2a0be';
+      ctx.beginPath(); ctx.ellipse(0,0,r,r*0.62,0,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=0.85;
+      ctx.fillStyle='#f9c6da';
+      ctx.beginPath(); ctx.ellipse(-r*0.2,-r*0.2,r*0.55,r*0.34,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  });
+  // cánh hoa bay rải rác như nền ảnh mẫu
+  for(let i=0;i<110;i++){
+    const x=rnd()*W, y=rnd()*H*0.88, r=2+rnd()*4.5;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(rnd()*Math.PI);
+    ctx.globalAlpha=0.3+rnd()*0.5;
+    ctx.fillStyle=rnd()<0.5?'#f5a3c2':'#f9c9dc';
+    ctx.beginPath(); ctx.ellipse(0,0,r,r*0.6,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+}
+// lần chạm/click đầu tiên cho phép phát nhạc về sau
+document.addEventListener('pointerdown',()=>{ if(slides[cur].id==='s7'&&musicOn) tryPlayMusic(); },{once:true});
+drawSakura();
+goTo(0);
+</script>
+</body>
+</html>
